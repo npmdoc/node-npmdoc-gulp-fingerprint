@@ -1,0 +1,221 @@
+<div class="apidocDiv">
+<style>
+/*csslint
+*/
+.apidocDiv {
+    background: #fff;
+    font-family: Arial, Helvetica, sans-serif;
+}
+.apidocDiv a[href] {
+    color: #33f;
+    font-weight: bold;
+    text-decoration: none;
+}
+.apidocDiv a[href]:hover {
+    text-decoration: underline;
+}
+.apidocCodeCommentSpan {
+    background: #bbf;
+    color: #000;
+    display: block;
+}
+.apidocCodeKeywordSpan {
+    color: #d00;
+    font-weight: bold;
+}
+.apidocCodePre {
+    background: #eef;
+    border: 1px solid;
+    color: #777;
+    padding: 5px;
+    white-space: pre-wrap;
+}
+.apidocFooterDiv {
+    margin-top: 20px;
+    text-align: center;
+}
+.apidocModuleLi {
+    margin-top: 10px;
+}
+.apidocSectionDiv {
+    border-top: 1px solid;
+    margin-top: 20px;
+}
+.apidocSignatureSpan {
+    color: #777;
+    font-weight: bold;
+}
+</style>
+<h1>api documentation for
+    <a
+
+    >gulp-fingerprint (v0.3.2)</a>
+</h1>
+<h4>Rename assets with fingerprinted assets</h4>
+<div class="apidocSectionDiv"><a
+    href="#apidoc.tableOfContents"
+    id="apidoc.tableOfContents"
+><h1>table of contents</h1></a><ol>
+
+    <li class="apidocModuleLi"><a href="#apidoc.module.gulp-fingerprint">module gulp-fingerprint</a><ol>
+
+        <li>
+
+            <a class="apidocElementLiA" href="#apidoc.element.gulp-fingerprint.gulp-fingerprint">
+            function <span class="apidocSignatureSpan"></span>gulp-fingerprint
+            <span class="apidocSignatureSpan">(manifest, options)</span>
+            </a>
+
+        </li>
+
+    </ol></li>
+
+</ol></div>
+
+<div class="apidocSectionDiv">
+<h1><a href="#apidoc.module.gulp-fingerprint" id="apidoc.module.gulp-fingerprint">module gulp-fingerprint</a></h1>
+
+
+    <h2>
+        <a href="#apidoc.element.gulp-fingerprint.gulp-fingerprint" id="apidoc.element.gulp-fingerprint.gulp-fingerprint">
+        function <span class="apidocSignatureSpan"></span>gulp-fingerprint
+        <span class="apidocSignatureSpan">(manifest, options)</span>
+        </a>
+    </h2>
+    <ul>
+    <li>description and source-code<pre class="apidocCodePre">gulp-fingerprint = function (manifest, options) {
+  options = options || {};
+
+  // Default regex to allow for single and double quotes
+  // var regex = new RegExp(&#x27;url\\(&#x22;(.*)&#x22;\\)|src=&#x22;(.*)&#x22;|href=&#x22;(.*)&#x22;|url\\(\&#x27;(.*)\&#x27;\\)|src=\&#x27;(.*)\&#x27;|href=\&#x27;(.*)\&#x27;&#x27;, &#x27;g&#x27;);
+  var regex = /(?:url\([&#x22;&#x27;]?(.*?)[&#x27;&#x22;]?\)|src=[&#x22;&#x27;](.*?)[&#x27;&#x22;]|src=([^\s\&#x3e;]+)(?:\&#x3e;|\s)|href=[&#x22;&#x27;](.*?)[&#x27;&#x22;]|href=([^\s\&#x3e;]+)(?:\&#x3e;|\s))/
+g;
+  var prefix = &#x27;&#x27;;
+  var base = &#x27;&#x27;;
+  var strip = &#x27;&#x27;;
+  var mode = &#x27;regex&#x27;;
+  var content = [];
+
+  // Use custom RegExp
+  if (options.regex) regex = options.regex;
+
+  if (options.prefix) prefix = options.prefix;
+
+  if (options.base) base = options.base.replace(/^\//, &#x27;&#x27;);
+
+  if (options.strip) strip = options.strip.replace(/^\//, &#x27;&#x27;);
+
+  if (options.mode === &#x27;replace&#x27;) {
+    mode = &#x27;replace&#x27;;
+  }
+
+  if (strip) {
+    var stripRegex = new RegExp(&#x27;^\/&#x27; + strip + &#x27;|^&#x27; + strip);
+  }
+
+  if (base) {
+    var baseRegex = new RegExp(&#x27;^\/&#x27; + base + &#x27;|^&#x27; + base);
+  }
+
+  if (typeof(manifest) === &#x27;string&#x27;) {
+    manifest = require(path.resolve(manifest));
+  }
+
+  function regexMode(buf, enc, cb) {
+    var line = buf.toString();
+
+    line = line.replace(regex, function(str, i) {
+      var url = Array.prototype.slice.call(arguments, 1).filter(function(a) {return a;})[0];
+      if (options.verbose) gutil.log(PLUGIN_NAME, &#x27;Found:&#x27;, chalk.yellow(url.replace(/^\//, &#x27;&#x27;)));
+      var replaced = manifest[url] || manifest[url.replace(/^\//, &#x27;&#x27;)] || manifest[url.split(/[#?]/)[0]];
+      if (!replaced &#x26;&#x26; base) replaced = manifest[url.replace(baseRegex, &#x27;&#x27;)];
+      if (replaced) {
+        if (strip) {
+          replaced = replaced.replace(stripRegex, &#x27;&#x27;);
+        }
+        str = str.replace(url, prefix + replaced);
+      }
+      if (options.verbose) gutil.log(PLUGIN_NAME, &#x27;Replaced:&#x27;, chalk.green(prefix + replaced));
+      return str;
+    });
+
+    content.push(line);
+    cb();
+  }
+
+  function replaceMode(buf, enc, cb) {
+    var line = buf.toString();
+
+    base = base.replace(/(^\/|\/$)/g, &#x27;&#x27;);
+
+    for (var url in manifest) {
+      var dest = manifest[url], replaced, bases;
+      if (strip) {
+        replaced = prefix + dest.replace(stripRegex, &#x27;&#x27;);
+      } else {
+        replaced = prefix + dest;
+      }
+      bases = [&#x27;/&#x27;, &#x27;&#x27;];
+      if (base) {
+        bases.unshift(&#x27;/&#x27; + base + &#x27;/&#x27;, base + &#x27;/&#x27;);
+      }
+      for (var i = 0; i &#x3c; bases.length; i++) {
+        var newLine = line.split(bases[i] + url).join(replaced);
+        if (line !== newLine) {
+          if (options.verbose) gutil.log(PLUGIN_NAME, &#x27;Found:&#x27;, chalk.yellow(url.replace(/^\//, &#x27;&#x27;)));
+          if (options.verbose) gutil.log(PLUGIN_NAME, &#x27;Replaced:&#x27;, chalk.green(prefix + replaced));
+          line = newLine;
+          break;
+        }
+      }
+    }
+
+    content.push(line);
+    cb();
+  }
+
+  var stream = through.obj(function(file, enc, cb) {
+    var that = this;
+    content = []; // reset file content
+
+    if (file.isNull()) {
+      this.push(file);
+      return cb();
+    }
+    // console.log(file.contents);
+
+    if (file.isStream()) {
+      // console.log(&#x27;is Stream&#x27;);
+      this.emit(&#x27;error&#x27;, new gutil.PluginError(PLUGIN_NAME, &#x27;Streaming not supported&#x27;));
+      return cb();
+    }
+
+    if (file.isBuffer()) {
+      // console.log(&#x27;is Buffer&#x27;);
+      file.pipe(split())
+      .pipe(through(mode === &#x27;regex&#x27; ? regexMode : replaceMode,  function(callback) {
+        if (content.length) {
+          file.contents = new Buffer(content.join(&#x27;\n&#x27;));
+          that.push(file);
+        }
+        // callback();
+        cb();
+      }));
+    }
+
+  });
+
+  return stream;
+}</pre></li>
+    <li>example usage<pre class="apidocCodePre">n/a</pre></li>
+    </ul>
+
+
+</div>
+
+<div class="apidocFooterDiv">
+    [ this document was created with
+    <a href="https://github.com/kaizhu256/node-utility2" target="_blank">utility2</a>
+    ]
+</div>
+</div>
